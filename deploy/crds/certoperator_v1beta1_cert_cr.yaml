@@ -1,0 +1,7 @@
+apiVersion: certoperator.5ik8s.com/v1beta1
+kind: Cert
+metadata:
+  name: example-cert
+spec:
+  # Add fields here
+  size: 3
