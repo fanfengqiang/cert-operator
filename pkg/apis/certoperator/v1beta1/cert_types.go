@@ -13,6 +13,11 @@ type CertSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	SecretName     string            `json:"secretName"`
+	Domain         string            `json:"domain"`
+	Provider       string            `json:"provider"`
+	Envs           map[string]string `json:"envs"`
+	ValidityPeriod int               `json:"validityPeriod"`
 }
 
 // CertStatus defines the observed state of Cert
@@ -21,6 +26,8 @@ type CertStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	SecretUpdateTime   string `json:"secretUpdateTime"`
+	RemainingValidDays int    `json:"remainingValidDays"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

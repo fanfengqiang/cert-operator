@@ -2,6 +2,8 @@ package cert
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	certoperatorv1beta1 "github.com/fanfengqiang/cert-operator/pkg/apis/certoperator/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,8 +54,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Cert
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Watch for changes to secondary resource Secrets and requeue the owner Cert
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &certoperatorv1beta1.Cert{},
 	})
@@ -78,7 +80,7 @@ type ReconcileCert struct {
 // Reconcile reads that state of the cluster for a Cert object and makes changes based on the state read
 // and what is in the Cert.Spec
 // TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
+// a Secret as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -94,60 +96,100 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			reqLogger.Info("Cert resource not found. Ignoring since object must be deleted")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		reqLogger.Error(err, "Failed to get Cert")
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
-
-	// Set Cert instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	// Check if this Secret already exists
+	found := &corev1.Secret{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
+		dep := r.sercretForCert(instance)
+		reqLogger.Info("Creating a new Secret", "Secret.Namespace", instance.Namespace, "Secret.Name", instance.Name)
+		err = r.client.Create(context.TODO(), dep)
 		if err != nil {
+			reqLogger.Error(err, "Failed to create new Secret", "Secret.Namespace", dep.Namespace, "Secret.Name", dep.Name)
 			return reconcile.Result{}, err
 		}
 
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
+		// Secret created successfully - don't requeue
+		return reconcile.Result{RequeueAfter: time.Second * 10}, nil
 	} else if err != nil {
+		reqLogger.Error(err, "Failed to get Secret")
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-	return reconcile.Result{}, nil
+	// Ensure the secret is in validityPeriod
+
+	loc, _ := time.LoadLocation("Local")
+	formatTime, _ := time.ParseInLocation("2006-01-02-15-04-05", found.Annotations["updateTime"], loc)
+
+	days := instance.Spec.ValidityPeriod - int(time.Now().Sub(formatTime).Hours()/24)
+	if days < 0 {
+		fmt.Println("renew status ValidityPeriod")
+		dep := r.sercretForCert(instance)
+		err = r.client.Update(context.TODO(), dep)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Secret", "Secret.Namespace", found.Namespace, "Deployment.Name", found.Name)
+			return reconcile.Result{}, err
+		}
+		// Spec updated - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	// Update RemainingValidDays if needed
+	if days != instance.Status.RemainingValidDays {
+		fmt.Println("renew status RemainingValidDays")
+		instance.Status.RemainingValidDays = days
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Cert status RemainingValidDays")
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Update the Cret status with the secret createtime
+	ctime := found.Annotations["updateTime"]
+	// Update status if needed
+	if ctime != instance.Status.SecretUpdateTime {
+		fmt.Println("renew status SecretUpdateTime")
+		instance.Status.SecretUpdateTime = ctime
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Cert status SecretUpdateTime")
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Secret already exists - don't requeue
+	reqLogger.Info("Skip reconcile: Secret already exists", "secret.Namespace", found.Namespace, "secret.Name", found.Name)
+	return reconcile.Result{RequeueAfter: time.Second * 10}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *certoperatorv1beta1.Cert) *corev1.Pod {
+func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) *corev1.Secret {
+
 	labels := map[string]string{
-		"app": cr.Name,
+		"certificateAuthority": "letsencrypt",
+		"controller":           c.Name,
+		"updateTime":           time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15-04-05"),
 	}
-	return &corev1.Pod{
+	fmt.Println("create a new secret")
+	dep := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
+			Name:        c.Name,
+			Namespace:   c.Namespace,
+			Annotations: labels,
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
+		Data: map[string][]byte{
+			"tls.crt": []byte("hello"),
+			"tls.key": []byte("word"),
 		},
 	}
+	// Set Cret instance as the owner and controller
+	controllerutil.SetControllerReference(c, dep, r.scheme)
+	return dep
 }

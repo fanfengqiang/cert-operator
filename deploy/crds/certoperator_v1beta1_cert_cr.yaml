@@ -1,7 +1,13 @@
 apiVersion: certoperator.5ik8s.com/v1beta1
 kind: Cert
 metadata:
-  name: example-cert
+  name: fanfengqiang.com
 spec:
   # Add fields here
-  size: 3
+  secretName: fanfengqiang.com
+  domain: fanfengqiang.com
+  validityPeriod: 30
+  provider: alidns
+  envs:
+    ALICLOUD_ACCESS_KEY: "LTAXXXXXXX1B35"
+    ALICLOUD_SECRET_KEY: "7SO3AXXXXXXXXXXXXXXXXXXXtkpyMm"
