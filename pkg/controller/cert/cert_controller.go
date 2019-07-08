@@ -2,7 +2,9 @@ package cert
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	certoperatorv1beta1 "github.com/fanfengqiang/cert-operator/pkg/apis/certoperator/v1beta1"
@@ -192,4 +194,15 @@ func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) *corev1.Secr
 	// Set Cret instance as the owner and controller
 	controllerutil.SetControllerReference(c, dep, r.scheme)
 	return dep
+}
+
+func base64encode(path string) string {
+	f, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Println(err, "base64encode")
+	}
+
+	// base64编码
+	encodeString := base64.StdEncoding.EncodeToString(f)
+	return encodeString
 }
