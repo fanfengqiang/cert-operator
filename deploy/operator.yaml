@@ -17,7 +17,7 @@ spec:
       containers:
         - name: cert-operator
           # Replace this with the built image name
-          image: fanfengqiang/cert-operator:v1.10
+          image: fanfengqiang/cert-operator:v2.2
           command:
           - cert-operator
           imagePullPolicy: Always

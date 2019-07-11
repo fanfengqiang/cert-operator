@@ -1,14 +1,14 @@
 apiVersion: certoperator.5ik8s.com/v1beta1
 kind: Cert
 metadata:
-  name: fanfengqiang.com
+  name: www.5ik8s.com
 spec:
   # Add fields here
-  secretName: fanfengqiang.com
-  domain: fanfengqiang.com
+  secretName: www.5ik8s.com
+  domain: www.5ik8s.com
   email: "1415228958@qq.com"
   validityPeriod: 30
   provider: alidns
   envs:
-    ALICLOUD_ACCESS_KEY: "LTAXXXXXXX1B35"
-    ALICLOUD_SECRET_KEY: "7SO3AXXXXXXXXXXXXXXXXXXXtkpyMm"
+    ALICLOUD_ACCESS_KEY: "LTAIXXXXXXXXXyzLu"
+    ALICLOUD_SECRET_KEY: "iH5sCTf4CzXXXXXXX9GLL2AsLW2"

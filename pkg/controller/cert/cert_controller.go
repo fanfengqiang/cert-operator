@@ -2,9 +2,7 @@ package cert
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	certoperatorv1beta1 "github.com/fanfengqiang/cert-operator/pkg/apis/certoperator/v1beta1"
@@ -23,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_cert")
+var logger = logf.Log.WithName("controller_cert")
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -87,7 +85,7 @@ type ReconcileCert struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := logger.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Cert")
 
 	// Fetch the Cert instance
@@ -110,7 +108,11 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 	found := &corev1.Secret{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		dep := r.sercretForCert(instance)
+		dep, err := r.sercretForCert(instance)
+		if err != nil {
+			reqLogger.Error(err, "file to create a new cert!")
+			return reconcile.Result{}, err
+		}
 		reqLogger.Info("Creating a new Secret", "Secret.Namespace", instance.Namespace, "Secret.Name", instance.Name)
 		err = r.client.Create(context.TODO(), dep)
 		if err != nil {
@@ -130,10 +132,14 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 	loc, _ := time.LoadLocation("Local")
 	formatTime, _ := time.ParseInLocation("2006-01-02-15-04-05", found.Annotations["updateTime"], loc)
 
-	days := instance.Spec.ValidityPeriod - int(time.Now().Sub(formatTime).Hours()/24)
+	days := instance.Spec.ValidityPeriod - int(time.Now().Sub(formatTime).Minutes())
 	if days < 0 {
 		fmt.Println("renew status ValidityPeriod")
-		dep := r.sercretForCert(instance)
+		dep, err := r.sercretForCert(instance)
+		if err != nil {
+			reqLogger.Error(err, "file to create a new cert!")
+			return reconcile.Result{}, err
+		}
 		err = r.client.Update(context.TODO(), dep)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update Secret", "Secret.Namespace", found.Namespace, "Deployment.Name", found.Name)
@@ -172,7 +178,14 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 	return reconcile.Result{RequeueAfter: time.Second * 10}, nil
 }
 
-func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) *corev1.Secret {
+func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) (*corev1.Secret, error) {
+
+	var aCert, err = CreateCert(c.Spec.Email, c.Spec.Domain, c.Spec.Provider, c.Spec.Envs)
+	fmt.Println(c.Spec.Email)
+	if err != nil {
+		fmt.Println(err, "Failed to create a new Cert")
+		return &corev1.Secret{}, err
+	}
 
 	labels := map[string]string{
 		"certificateAuthority": "letsencrypt",
@@ -187,22 +200,11 @@ func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) *corev1.Secr
 			Annotations: labels,
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte("hello"),
-			"tls.key": []byte("word"),
+			"tls.crt": aCert["cert"],
+			"tls.key": aCert["key"],
 		},
 	}
 	// Set Cret instance as the owner and controller
 	controllerutil.SetControllerReference(c, dep, r.scheme)
-	return dep
-}
-
-func base64encode(path string) string {
-	f, err := ioutil.ReadFile(path)
-	if err != nil {
-		fmt.Println(err, "base64encode")
-	}
-
-	// base64编码
-	encodeString := base64.StdEncoding.EncodeToString(f)
-	return encodeString
+	return dep, nil
 }
