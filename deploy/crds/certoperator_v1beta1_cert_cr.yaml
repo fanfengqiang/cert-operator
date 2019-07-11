@@ -6,6 +6,7 @@ spec:
   # Add fields here
   secretName: fanfengqiang.com
   domain: fanfengqiang.com
+  email: "1415228958@qq.com"
   validityPeriod: 30
   provider: alidns
   envs:

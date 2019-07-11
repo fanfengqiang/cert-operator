@@ -15,6 +15,7 @@ type CertSpec struct {
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	SecretName     string            `json:"secretName"`
 	Domain         string            `json:"domain"`
+	Email          string            `json:"email"`
 	Provider       string            `json:"provider"`
 	Envs           map[string]string `json:"envs"`
 	ValidityPeriod int               `json:"validityPeriod"`
