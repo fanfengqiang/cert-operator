@@ -29,42 +29,41 @@ operator-sdk build fanfengqiang/cert-operator:v1.0
 
 1. 创建自定义资源CRD
 
-```bash
-# 创建CRD资源
-kubectl apply -f deploy/crds/certoperator_v1beta1_cert_crd.yaml
-# 创建控制器所需的SA
-kubectl apply -f deploy/service_account.yaml
-# 创建角色和角色绑定
-kubectl apply -f deploy/clusterrole.yaml
-kubectl apply -f deploy/clusterrole_binding.yaml
-# 创建控制器
-kubectl apply -f deploy/operator.yaml
-```
-2. 编写cert资源清单并应用
-
-
-```bash
-# cat deploy/crds/certoperator_v1beta1_cert_cr.yaml
-apiVersion: certoperator.5ik8s.com/v1beta1
-kind: Cert
-metadata:
-  name: www.5ik8s.com
-spec:
-  secretName: www.5ik8s.com
-  domain: www.5ik8s.com
-  email: "1415228958@qq.com"
-  validityPeriod: 30
-  provider: alidns
-  envs:
-    ALICLOUD_ACCESS_KEY: "LTAIXXXXXXXXXyzLu"
-    ALICLOUD_SECRET_KEY: "iH5sCTf4CzXXXXXXX9GLL2AsLW2"
-```
-
    ```bash
-# 应用资源清单
-kubectl apply -f deploy/crds/certoperator_v1beta1_cert_cr.yaml
+   # 创建CRD资源
+   kubectl apply -f deploy/crds/certoperator_v1beta1_cert_crd.yaml
+   # 创建控制器所需的SA
+   kubectl apply -f deploy/service_account.yaml
+   # 创建角色和角色绑定
+   kubectl apply -f deploy/clusterrole.yaml
+   kubectl apply -f deploy/clusterrole_binding.yaml
+   # 创建控制器
+   kubectl apply -f deploy/operator.yaml
    ```
 
+2. 编写cert资源清单并应用
+
+   ```bash
+   # cat deploy/crds/certoperator_v1beta1_cert_cr.yaml
+   apiVersion: certoperator.5ik8s.com/v1beta1
+   kind: Cert
+   metadata:
+     name: www.5ik8s.com
+   spec:
+     secretName: www.5ik8s.com
+     domain: www.5ik8s.com
+     email: "1415228958@qq.com"
+     validityPeriod: 30
+     provider: alidns
+     envs:
+       ALICLOUD_ACCESS_KEY: "LTAIXXXXXXXXXyzLu"
+       ALICLOUD_SECRET_KEY: "iH5sCTf4CzXXXXXXX9GLL2AsLW2"
+   ```
+
+   ```bash
+   # 应用资源清单
+   kubectl apply -f deploy/crds/certoperator_v1beta1_cert_cr.yaml
+   ```
 
 3. 参数定义
 
@@ -77,7 +76,7 @@ kubectl apply -f deploy/crds/certoperator_v1beta1_cert_cr.yaml
    | .spec.provider       | 域名托管商的标示                   |
    | .spec.envs           | 域名托管商API的accesskey和secret   |
 
-   完整域名托管商的格式，accesskey和secret格式[参见](https://go-acme.github.io/lego/dns/)
+完整域名托管商的格式，accesskey和secret格式[参见](https://go-acme.github.io/lego/dns/)
 
 ## 致谢
 
@@ -85,4 +84,3 @@ kubectl apply -f deploy/crds/certoperator_v1beta1_cert_cr.yaml
 
 - [memcached-operator](https://github.com/operator-framework/operator-sdk-samples/tree/master/memcached-operator)
 - [lego](https://github.com/go-acme/lego)
-
