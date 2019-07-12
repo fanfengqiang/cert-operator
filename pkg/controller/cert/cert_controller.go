@@ -2,7 +2,7 @@ package cert
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"time"
 
 	certoperatorv1beta1 "github.com/fanfengqiang/cert-operator/pkg/apis/certoperator/v1beta1"
@@ -132,9 +132,9 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 	loc, _ := time.LoadLocation("Local")
 	formatTime, _ := time.ParseInLocation("2006-01-02-15-04-05", found.Annotations["updateTime"], loc)
 
-	days := instance.Spec.ValidityPeriod - int(time.Now().Sub(formatTime).Minutes())
+	days := instance.Spec.ValidityPeriod - int(time.Now().Sub(formatTime).Hours()/24)
 	if days < 0 {
-		fmt.Println("renew status ValidityPeriod")
+		log.Println("renew status ValidityPeriod")
 		dep, err := r.sercretForCert(instance)
 		if err != nil {
 			reqLogger.Error(err, "file to create a new cert!")
@@ -151,7 +151,7 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// Update RemainingValidDays if needed
 	if days != instance.Status.RemainingValidDays {
-		fmt.Println("renew status RemainingValidDays")
+		log.Println("renew status RemainingValidDays")
 		instance.Status.RemainingValidDays = days
 		err := r.client.Status().Update(context.TODO(), instance)
 		if err != nil {
@@ -164,7 +164,7 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 	ctime := found.Annotations["updateTime"]
 	// Update status if needed
 	if ctime != instance.Status.SecretUpdateTime {
-		fmt.Println("renew status SecretUpdateTime")
+		log.Println("renew status SecretUpdateTime")
 		instance.Status.SecretUpdateTime = ctime
 		err := r.client.Status().Update(context.TODO(), instance)
 		if err != nil {
@@ -181,9 +181,9 @@ func (r *ReconcileCert) Reconcile(request reconcile.Request) (reconcile.Result, 
 func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) (*corev1.Secret, error) {
 
 	var aCert, err = CreateCert(c.Spec.Email, c.Spec.Domain, c.Spec.Provider, c.Spec.Envs)
-	fmt.Println(c.Spec.Email)
+	log.Println(c.Spec.Email)
 	if err != nil {
-		fmt.Println(err, "Failed to create a new Cert")
+		log.Println(err, "Failed to create a new Cert")
 		return &corev1.Secret{}, err
 	}
 
@@ -192,7 +192,7 @@ func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) (*corev1.Sec
 		"controller":           c.Name,
 		"updateTime":           time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15-04-05"),
 	}
-	fmt.Println("create a new secret")
+	log.Println("create a new secret")
 	dep := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        c.Name,

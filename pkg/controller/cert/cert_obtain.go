@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
 	"log"
 	"os"
 
@@ -44,7 +43,7 @@ func CreateCert(email, domain, prov string, envs map[string]string) (map[string]
 	for k, v := range envs {
 		err := os.Setenv(k, v)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 			return nil, err
 		}
 	}
@@ -63,8 +62,6 @@ func CreateCert(email, domain, prov string, envs map[string]string) (map[string]
 
 	config := lego.NewConfig(&myUser)
 
-	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
-	// config.CADirURL = "http://192.168.99.100:4000/directory"
 	config.Certificate.KeyType = certcrypto.RSA2048
 
 	// A client facilitates communication with the CA server.
@@ -101,8 +98,8 @@ func CreateCert(email, domain, prov string, envs map[string]string) (map[string]
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL. SAVE THESE TO DISK.
-	fmt.Println("key:", string(certificates.PrivateKey))
-	fmt.Println("cert:", string(certificates.Certificate))
+	// log.Println("key:", string(certificates.PrivateKey))
+	// log.Println("cert:", string(certificates.Certificate))
 
 	cert := map[string][]byte{
 		"key":  certificates.PrivateKey,

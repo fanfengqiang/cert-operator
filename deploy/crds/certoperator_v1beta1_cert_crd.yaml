@@ -28,7 +28,28 @@ spec:
         metadata:
           type: object
         spec:
-          type: object
+          properties:
+            secretName:
+              type: string
+            domain:
+              type: string
+            email:
+              type: string
+            provider:
+              type: string
+            validityPeriod:
+              type: integer
+              minimum: 1
+              maximum: 89
+            envs:
+              type: object
+          required:
+            - secretName
+            - domain
+            - email
+            - provider
+            - validityPeriod
+            - envs
         status:
           type: object
   version: v1beta1
