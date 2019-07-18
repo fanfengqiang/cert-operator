@@ -199,6 +199,7 @@ func (r *ReconcileCert) sercretForCert(c *certoperatorv1beta1.Cert) (*corev1.Sec
 			Namespace:   c.Namespace,
 			Annotations: labels,
 		},
+		Type: "kubernetes.io/tls",
 		Data: map[string][]byte{
 			"tls.crt": aCert["cert"],
 			"tls.key": aCert["key"],
