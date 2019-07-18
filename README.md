@@ -68,7 +68,7 @@ operator-sdk build fanfengqiang/cert-operator:v1.0
 3. 参数定义
 
    | 参数                 | 含义                               |
-   | :------------------- | :--------------------------------- |
+   | ------------------- | --------------------------------- |
    | .metadata.name       | cert资源的名字                     |
    | .spec.secretName     | 生成的secret的名字                 |
    | .spec.domain         | 生成证书的域名                     |
